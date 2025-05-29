@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PanificaApp - Gerenciador do Seu Jorge</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+    <style>
+        /* Resets e básico */
+        * {
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: #fef9f1;
+            color: #3d3d3d;
+            min-height: 100vh;
+        }
+
+        /* --- TELA DE LOGIN --- */
+        #tela-login {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #FFB347 0%, #FFCC33 100%);
+            padding: 20px;
+        }
+
+        #tela-login .login-box {
+            background: #fff9f0;
+            padding: 35px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(255, 122, 1, 0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        #tela-login .logo {
+            font-size: 52px;
+            margin-bottom: 10px;
+            color: #d07300;
+        }
+
+        #tela-login h2 {
+            font-weight: 700;
+            font-size: 30px;
+            margin-bottom: 30px;
+            color: #d07300;
+        }
+
+        #tela-login input {
+            width: 100%;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            border-radius: 10px;
+            border: 2px solid #ffb347;
+            transition: border-color 0.3s ease;
+            outline: none;
+        }
+
+        #tela-login button {
+            width: 100%;
+            padding: 14px;
+            font-size: 20px;
+            background-color: #ff9900;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* --- TELA PRINCIPAL --- */
+        #tela-principal {
+            display: none;
+            min-height: 100vh;
+            background-color: #fffbf0;
+            padding: 20px 25px 100px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffb347;
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            color: #5c3300;
+        }
+
+        header h1 {
+            font-weight: 900;
+            font-size: 24px;
+        }
+
+        header .usuario {
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        header button {
+            background: #d07300;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        main {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Outros estilos omitidos para brevidade */
+    </style>
+</head>
+
+<body>
+
+    <!-- Tela Login -->
+    <div id="tela-login" aria-label="Tela de login do PanificaApp">
+        <div class="login-box" role="main">
+            <div class="logo" aria-hidden="true">🍞</div>
+            <h2>Bem-vindo ao PanificaApp</h2>
+            <input type="text" id="input-usuario" placeholder="Usuário" aria-label="Campo para usuário" />
+            <input type="password" id="input-senha" placeholder="Senha" aria-label="Campo para senha" />
+            <button id="btn-login" aria-label="Entrar no aplicativo">Entrar</button>
+            <button id="btn-visitante" aria-label="Entrar como visitante">Entrar como Visitante</button>
+        </div>
+    </div>
+
+    <!-- Tela Principal -->
+    <div id="tela-principal" aria-live="polite" aria-label="Painel principal do PanificaApp">
+        <header>
+            <h1>PanificaApp - Seu Jorge</h1>
+            <div class="usuario" aria-label="Nome do usuário logado"></div>
+            <button id="btn-logout" aria-label="Sair do aplicativo">Sair</button>
+        </header>
+        <main>
+            <!-- Conteúdo omitido para brevidade -->
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY",
+            authDomain: "SEU_DOMINIO.firebaseapp.com",
+            projectId: "SEU_PROJETO_ID",
+            storageBucket: "SEU_BUCKET.appspot.com",
+            messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+            appId: "SEU_APP_ID"
+        };
+
+        // Inicializar Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Estado
+        let vendas = [];
+        let gastos = [];
+        let fiados = [];
+
+        // Elementos
+        const telaLogin = document.getElementById('tela-login');
+        const telaPrincipal = document.getElementById('tela-principal');
+        const btnLogin = document.getElementById('btn-login');
+        const btnLogout = document.getElementById('btn-logout');
+        const btnVisitante = document.getElementById('btn-visitante');
+        const usuarioDisplay = document.querySelector('header .usuario');
+
+        // Login padrão: permitir qualquer usuário/senha não vazia
+        btnLogin.addEventListener('click', async () => {
+            const usuarioInput = document.getElementById('input-usuario').value.trim();
+            const senhaInput = document.getElementById('input-senha').value.trim();
+
+            if (usuarioInput.length === 0 || senhaInput.length === 0) {
+                alert('Por favor, preencha usuário e senha.');
+                return;
+            }
+
+            // Simulação de autenticação
+            telaLogin.style.display = 'none';
+            telaPrincipal.style.display = 'block';
+            usuarioDisplay.textContent = `Olá, ${usuarioInput}`;
+            await carregarDados(usuarioInput); // Carregar dados do usuário
+        });
+
+        // Botão "Entrar como Visitante" para acesso rápido
+        btnVisitante.addEventListener('click', () => {
+            telaLogin.style.display = 'none';
+            telaPrincipal.style.display = 'block';
+            usuarioDisplay.textContent = 'Olá, Visitante';
+            vendas = [];
+            gastos = [];
+            fiados = [];
+            atualizarRelatorios();
+        });
+
+        btnLogout.addEventListener('click', () => {
+            vendas = [];
+            gastos = [];
+            fiados = [];
+            telaPrincipal.style.display = 'none';
+            telaLogin.style.display = 'flex';
+            // Limpar campos login
+            document.getElementById('input-usuario').value = '';
+            document.getElementById('input-senha').value = '';
+        });
+
+        // Carregar dados do usuário
+        async function carregarDados(usuarioId) {
+            const vendasRef = db.collection('usuarios').doc(usuarioId).collection('vendas');
+            const gastosRef = db.collection('usuarios').doc(usuarioId).collection('gastos');
+            const fiadosRef = db.collection('usuarios').doc(usuarioId).collection('fiados');
+
+            const vendasSnapshot = await vendasRef.get();
+            vendasSnapshot.forEach(doc => {
+                vendas.push({ ...doc.data(), id: doc.id });
+            });
+
+            const gastosSnapshot = await gastosRef.get();
+            gastosSnapshot.forEach(doc => {
+                gastos.push({ ...doc.data(), id: doc.id });
+            });
+
+            const fiadosSnapshot = await fiadosRef.get();
+            fiadosSnapshot.forEach(doc => {
+                fiados.push({ ...doc.data(), id: doc.id });
+            });
+
+            atualizarRelatorios();
+        }
+
+        // Atualiza relatórios e resumo do dia
+        function atualizarRelatorios() {
+            const totalVendas = vendas.reduce((acc, v) => acc + v.valor, 0);
+            const totalGastos = gastos.reduce((acc, g) => acc + g.valor, 0);
+            const lucro = totalVendas - totalGastos;
+
+            document.getElementById('relatorio-vendas').textContent = `R$ ${totalVendas.toFixed(2)}`;
+            document.getElementById('relatorio-gastos').textContent = `R$ ${totalGastos.toFixed(2)}`;
+            document.getElementById('relatorio-lucro').textContent = `R$ ${lucro.toFixed(2)}`;
+        }
+    </script>
+</body>
+
+</html>
